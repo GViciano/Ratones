@@ -1,0 +1,1122 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ratones a la vista</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: the stage is a big "challenge card" (number top-left, targets in three corners, like the printed cards); a control column sits beside it and drops below on phones. */
+:root {
+  --bg: #e8f2f0;
+  --surface: #ffffff;
+  --sunk: #f2f8f6;
+  --ink: #163e4d;
+  --muted: #5b7880;
+  --line: #cfe1dd;
+  --accent: #e0761b;
+  --accent-ink: #ffffff;
+  --teal: #23807c;
+  --good: #23944f;
+  --bad: #d23838;
+  --stage: #f8fcfb;
+  --lv1: #1fae49; --lv2: #f0c013; --lv3: #e2312f; --lv4: #2789dc; --lv5: #ae55cc;
+  --display: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;
+  --body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1c21; --surface: #15272d; --sunk: #102026; --ink: #e2f0ed; --muted: #92aeb3;
+    --line: #26414a; --accent: #f29438; --accent-ink: #1a1206; --teal: #4fbfb8; --good: #47c47a; --bad: #ff6b6b;
+    --stage: #12242a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1c21; --surface: #15272d; --sunk: #102026; --ink: #e2f0ed; --muted: #92aeb3;
+  --line: #26414a; --accent: #f29438; --accent-ink: #1a1206; --teal: #4fbfb8; --good: #47c47a; --bad: #ff6b6b;
+  --stage: #12242a; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 24px; box-sizing: border-box;
+}
+*, *::before, *::after { box-sizing: border-box; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible + .switch, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; max-width: 1280px; margin: 0 auto 12px; }
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.brand h1 { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 4vw, 36px); line-height: 1; margin: 0; letter-spacing: -0.01em; }
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 0; color: var(--muted); font-weight: 600; }
+.top .spacer { flex: 1; }
+.nav { display: flex; align-items: center; gap: 6px; }
+.btn {
+  border: 2px solid var(--line); background: var(--surface); border-radius: 12px; padding: 7px 12px;
+  font-weight: 800; display: inline-flex; align-items: center; gap: 6px; line-height: 1.2;
+}
+.btn:hover:not(:disabled) { border-color: var(--teal); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.round { width: 40px; height: 40px; justify-content: center; padding: 0; font-size: 18px; }
+.progress { font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.game { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; max-width: 1280px; margin: 0 auto; }
+@media (max-width: 900px) { .game { grid-template-columns: minmax(0, 1fr); } }
+
+.stage {
+  position: relative; background: var(--stage); border: 2px dashed var(--line); border-radius: 28px;
+  height: min(calc(100vh - 110px), 760px); min-height: 460px; overflow: hidden; touch-action: none;
+}
+@media (max-width: 900px) { .stage { height: min(72vh, 560px); min-height: 380px; } }
+@media (max-width: 560px) { .corner .cur { display: none; } }
+#scene { width: 100%; height: 100%; display: block; }
+.corner { position: absolute; pointer-events: none; font-family: var(--display); font-weight: 800; display: flex; align-items: center; gap: 4px; line-height: 1; }
+.corner .n { font-size: clamp(34px, 5vw, 48px); }
+.corner .cur { font-size: 15px; font-family: var(--body); font-weight: 800; padding: 3px 8px; border-radius: 99px; background: var(--sunk); border: 2px solid var(--line); color: var(--muted); }
+.corner .cur.ok { color: var(--good); border-color: var(--good); }
+.corner svg { width: 38px; height: 38px; color: #a9b2b4; }
+.c-top { top: 16px; right: 20px; }
+.c-left { bottom: 14px; left: 20px; }
+.c-right { bottom: 14px; right: 20px; }
+.c-id { top: 14px; left: 16px; flex-direction: column; align-items: flex-start; gap: 8px; }
+.idnum { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 28px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); }
+.idcubes { display: flex; flex-direction: column; gap: 4px; padding-left: 6px; }
+.idcubes svg { width: 26px; height: 26px; }
+.stage-tools { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+.stage-tools .btn { padding: 5px 10px; font-size: 13px; background: color-mix(in srgb, var(--surface) 85%, transparent); }
+.clock {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%); pointer-events: none;
+  display: flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 99px;
+  background: var(--surface); border: 2px solid var(--line);
+  font-family: var(--display); font-weight: 800; font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums;
+}
+.clock svg { width: 18px; height: 18px; color: var(--muted); }
+.clock.done { border-color: var(--good); color: var(--good); }
+.clock.done svg { color: var(--good); }
+.clock.paused { color: var(--muted); }
+.toast {
+  position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); max-width: min(92%, 460px);
+  background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 14px; font-weight: 700; text-align: center;
+  pointer-events: none; transition: opacity .25s; opacity: 0;
+}
+.toast.show { opacity: .95; }
+
+.panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.block { background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.block h2 { font-family: var(--display); font-size: 19px; margin: 0; line-height: 1.1; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; text-wrap: balance; }
+.block h2 small { font-family: var(--body); font-size: 13px; color: var(--muted); font-weight: 700; }
+.note { margin: 0; color: var(--muted); font-size: 13.5px; }
+
+.tray { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.chip {
+  border: 2px solid var(--line); background: var(--sunk); border-radius: 14px; padding: 8px 6px 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-weight: 800; font-size: 13px;
+}
+.chip svg { width: 44px; height: 44px; }
+.chip .st { font-weight: 600; font-size: 12px; color: var(--muted); }
+.chip.held { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.chip.placed .st { color: var(--good); }
+
+.rotpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.rotpad .btn { justify-content: center; flex-direction: column; gap: 0; padding: 6px 4px; font-size: 12px; font-weight: 700; }
+.rotpad .btn b { font-size: 22px; line-height: 1.1; }
+.rotpad .wide { grid-column: span 3; flex-direction: row; gap: 6px; font-size: 14px; font-weight: 800; }
+
+.views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.view { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.view canvas { width: 100%; aspect-ratio: 1; max-width: 100%; border-radius: 12px; background: var(--sunk); border: 2px solid var(--line); display: block; }
+.view canvas.xbad { border-color: var(--bad); }
+.view .lbl { font-size: 12px; font-weight: 800; color: var(--muted); text-align: center; line-height: 1.2; }
+.view .val { font-family: var(--display); font-weight: 800; font-size: 18px; line-height: 1; font-variant-numeric: tabular-nums; }
+.view .val.ok { color: var(--good); }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row .btn { flex: 1 1 auto; justify-content: center; }
+.row .btn.round { flex: none; }
+.toggle { display: flex; align-items: center; gap: 10px; font-weight: 700; cursor: pointer; user-select: none; }
+.toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch { width: 42px; height: 24px; border-radius: 99px; background: var(--line); position: relative; transition: background .2s; flex: none; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); transition: transform .2s; }
+.toggle input:checked + .switch { background: var(--teal); }
+.toggle input:checked + .switch::after { transform: translateX(18px); }
+
+details.rules summary { font-family: var(--display); font-weight: 700; font-size: 17px; cursor: pointer; }
+details.rules ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
+.legend { display: grid; grid-template-columns: 34px 1fr; gap: 6px 10px; align-items: center; margin-top: 10px; font-size: 14px; }
+.legend canvas { width: 34px; height: 34px; border-radius: 6px; }
+
+.overlay { position: fixed; inset: 0; background: rgba(8, 20, 24, .55); display: grid; place-items: center; z-index: 20; padding: 16px; }
+.dialog { background: var(--surface); border-radius: 24px; padding: 20px; width: min(720px, 100%); max-height: calc(100% - 20px); overflow: auto; border: 2px solid var(--line); }
+.dialog h2 { font-family: var(--display); margin: 0 0 4px; font-size: 26px; }
+.level { margin-top: 14px; }
+.level h3 { margin: 0 0 8px; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.level h3 i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 6px; }
+.grid button { aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; font-family: var(--display); font-weight: 800; font-size: 18px; color: #fff; position: relative; }
+.grid button.cur { border-color: var(--ink); }
+.grid button.done::after { content: "✓"; position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; border-radius: 50%; background: var(--good); color: #fff; font-size: 13px; display: grid; place-items: center; border: 2px solid var(--surface); }
+.win { text-align: center; width: min(420px, 100%); }
+.win p { color: var(--muted); font-weight: 600; margin: 4px 0 16px; }
+.win .row { justify-content: center; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.stat { background: var(--sunk); border: 2px solid var(--line); border-radius: 14px; padding: 8px 10px; min-width: 0; }
+.stat b { display: block; font-family: var(--display); font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.tablewrap { overflow-x: auto; max-height: 46vh; overflow-y: auto; border: 2px solid var(--line); border-radius: 14px; }
+.log { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.log th { position: sticky; top: 0; background: var(--sunk); text-align: left; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; }
+.log td { padding: 7px 10px; border-top: 1px solid var(--line); white-space: nowrap; }
+.log .reto { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #fff; font-family: var(--display); font-weight: 800; }
+.log .best { color: var(--good); font-weight: 800; }
+.log .help { color: var(--muted); }
+.logfoot { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.logfoot .btn.danger { color: var(--bad); }
+#copyBox { width: 100%; min-height: 90px; font: 12px/1.4 ui-monospace, Consolas, monospace; border-radius: 10px; border: 2px solid var(--line); background: var(--sunk); color: var(--ink); padding: 8px; }
+@media (max-width: 480px) { .stat b { font-size: 18px; } }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 30; width: 100%; height: 100%; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .toast, .switch, .switch::after { transition: none; } }
+</style>
+
+<header class="top">
+  <div class="brand">
+    <h1>Ratones <span>a la vista</span></h1>
+    <p>60 retos de lógica y visión espacial</p>
+  </div>
+  <div class="spacer"></div>
+  <span class="progress" id="progress">0 / 60</span>
+  <div class="nav">
+    <button class="btn round" id="prev" aria-label="Reto anterior">‹</button>
+    <button class="btn" id="openGrid">Retos</button>
+    <button class="btn round" id="next" aria-label="Reto siguiente">›</button>
+  </div>
+  <button class="btn" id="openLog">Mis tiempos</button>
+</header>
+
+<main class="game">
+  <section class="stage" id="stage">
+    <div class="loading" id="loading">Preparando la base…</div>
+    <canvas id="scene" aria-label="Base 2×2 en 3D con los cubos del reto"></canvas>
+    <div class="corner c-id"><div class="idnum" id="idnum">1</div><div class="idcubes" id="idcubes"></div></div>
+    <div class="corner c-top" title="Ratones vistos desde arriba">
+      <span class="cur" id="curTop" hidden></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 2h6v12h5l-8 9-8-9h5z"/></svg>
+      <span class="n" id="tTop">0</span>
+    </div>
+    <div class="corner c-left" title="Ratones vistos desde la izquierda">
+      <span class="n" id="tLeft">0</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4.5 21.5l-2-2 9.3-9.3-3.5-3.5L21 3l-3.7 12.7-3.5-3.5z"/></svg>
+      <span class="cur" id="curLeft" hidden></span>
+    </div>
+    <div class="corner c-right" title="Ratones vistos desde la derecha">
+      <span class="cur" id="curRight" hidden></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.5 21.5l2-2-9.3-9.3 3.5-3.5L3 3l3.7 12.7 3.5-3.5z"/></svg>
+      <span class="n" id="tRight">0</span>
+    </div>
+    <div class="clock" id="clock" title="Tiempo en este reto (se para si cambias de pestaña)" role="timer">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 1h6v2H9zM12 4a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 16a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm1-11h-2v5l4 2.4 1-1.6-3-1.8z"/></svg>
+      <span id="clockText">0:00</span>
+    </div>
+    <div class="stage-tools"><button class="btn" id="resetCam">Centrar vista</button></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </section>
+
+  <aside class="panel">
+    <div class="block">
+      <h2>Cubos del reto <small id="trayCount"></small></h2>
+      <p class="note" id="trayNote">Toca un cubo y luego una casilla de la base.</p>
+      <div class="tray" id="tray"></div>
+    </div>
+
+    <div class="block">
+      <h2>Mover el cubo <small id="selName">ninguno elegido</small></h2>
+      <div class="rotpad">
+        <button class="btn" data-rot="spinL" title="Girar sobre sí mismo (Q)"><b>↺</b>Girar</button>
+        <button class="btn" data-rot="rollL" title="Volcar hacia la izquierda (A)"><b>↙</b>Volcar</button>
+        <button class="btn" data-rot="rollR" title="Volcar hacia la derecha (D)"><b>↘</b>Volcar</button>
+        <button class="btn" data-rot="spinR" title="Girar al otro lado (E)"><b>↻</b>Girar</button>
+        <button class="btn" data-rot="rollLb" title="Volcar hacia atrás a la derecha (W)"><b>↗</b>Volcar</button>
+        <button class="btn" data-rot="rollRb" title="Volcar hacia atrás a la izquierda (S)"><b>↖</b>Volcar</button>
+        <button class="btn wide" id="remove" title="Devolver a la bandeja (Supr)">Quitar de la base</button>
+      </div>
+    </div>
+
+    <div class="block">
+      <h2>Lo que se ve</h2>
+      <div class="views">
+        <div class="view"><canvas id="vTop"></canvas><span class="lbl">Desde arriba ↓</span><span class="val" id="vvTop"></span></div>
+        <div class="view"><canvas id="vLeft"></canvas><span class="lbl">Desde la izquierda ↗</span><span class="val" id="vvLeft"></span></div>
+        <div class="view"><canvas id="vRight"></canvas><span class="lbl">Desde la derecha ↖</span><span class="val" id="vvRight"></span></div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="help"><span class="switch"></span>Contar los ratones por mí</label>
+    </div>
+
+    <div class="block">
+      <div class="row">
+        <button class="btn primary" id="check">Comprobar</button>
+        <button class="btn" id="hint">Pista</button>
+        <button class="btn" id="solve">Solución</button>
+        <button class="btn" id="reset">Reiniciar</button>
+      </div>
+    </div>
+
+    <details class="block rules">
+      <summary>Cómo se juega</summary>
+      <ul>
+        <li>Coloca y gira los cubos para que se vean <b>exactamente</b> los ratones del reto desde arriba ↓, desde la izquierda ↗ y desde la derecha ↖.</li>
+        <li>Los cubos que ya vienen puestos no se pueden mover ni girar.</li>
+        <li>Cada cubo ocupa una casilla de la base 2×2. Puedes apilarlos si quedan bien apoyados: toca la cara de arriba de un cubo para poner otro encima.</li>
+        <li>Usa todos los cubos del reto. Un cubo gris <b>?</b> significa que tú eliges cuál.</li>
+        <li>Solo cuentan las caras que miran hacia cada vista y que no tapa otro cubo.</li>
+        <li>Solo hay una solución. Arrastra en la escena para mirar desde otro ángulo.</li>
+      </ul>
+      <div class="legend" id="legend"></div>
+    </details>
+  </aside>
+</main>
+
+<div class="overlay" id="gridOverlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="gridTitle">
+    <div class="row" style="justify-content: space-between; flex-wrap: nowrap;">
+      <h2 id="gridTitle">Elige un reto</h2>
+      <button class="btn round" id="closeGrid" aria-label="Cerrar">×</button>
+    </div>
+    <div id="levels"></div>
+  </div>
+</div>
+
+<div class="overlay" id="logOverlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="logTitle">
+    <div class="row" style="justify-content: space-between; flex-wrap: nowrap;">
+      <h2 id="logTitle">Mis tiempos</h2>
+      <button class="btn round" id="closeLog" aria-label="Cerrar">×</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stSolved">0</b><span>retos superados</span></div>
+      <div class="stat"><b id="stTotal">0:00</b><span>tiempo total</span></div>
+      <div class="stat"><b id="stAvg">–</b><span>media por reto</span></div>
+    </div>
+    <div class="tablewrap" id="logWrap">
+      <table class="log">
+        <thead><tr><th>Reto</th><th>Tiempo</th><th>Ayudas</th><th>Fecha</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+    <p class="note" id="logEmpty" hidden>Aún no hay tiempos. Cada reto que superes aparecerá aquí con lo que has tardado.</p>
+    <div class="logfoot">
+      <div class="row">
+        <button class="btn primary" id="exportCsv" hidden>Exportar CSV</button>
+        <button class="btn" id="copyCsv">Copiar como CSV</button>
+        <button class="btn danger" id="clearLog">Borrar registro</button>
+      </div>
+      <textarea id="copyBox" readonly hidden aria-label="Registro en formato CSV"></textarea>
+      <p class="note" id="logWhere">Guardado en este navegador.</p>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="winOverlay" hidden>
+  <div class="dialog win" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <h2 id="winTitle">¡Reto superado!</h2>
+    <p id="winText">Todos los ratones están a la vista.</p>
+    <div class="row">
+      <button class="btn" id="stay">Seguir mirando</button>
+      <button class="btn primary" id="nextWin">Siguiente reto ›</button>
+    </div>
+  </div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// ---------- Retos (transcritos del manual) ----------
+// add: cubos a colocar (B azul, Y amarillo, O naranja, P rosa, ? = eliges tú). t: [arriba, izquierda, derecha].
+// pre: [cubo, casilla, piso, [arriba, izquierda, derecha]] con casillas B=fondo, L=izquierda, R=derecha, F=delante.
+const CH={"1":{"add":"B","t":[3,2,1],"pre":[]},"2":{"add":"P","t":[4,3,3],"pre":[]},"3":{"add":"B","t":[4,3,3],"pre":[["Y","B",1,[1,1,2]]]},"4":{"add":"B","t":[3,3,3],"pre":[["Y","B",1,[1,1,2]]]},"5":{"add":"Y","t":[2,1,1],"pre":[["O","L",1,[2,0,1]],["P","B",1,[-1,null,3]]]},"6":{"add":"O","t":[2,10,6],"pre":[["Y","L",1,[1,2,1]],["P","R",1,[-1,4,3]]]},"7":{"add":"B","t":[3,9,6],"pre":[["Y","L",1,[null,2,1]],["O","L",2,[2,4,3]]]},"8":{"add":"P","t":[4,2,5],"pre":[["B","L",1,[1,3,null]],["O","F",1,[3,0,2]]]},"9":{"add":"O","t":[2,4,1],"pre":[["B","L",1,[1,3,2]],["Y","B",1,[1,null,null]],["P","R",1,[0,4,-1]]]},"10":{"add":"P","t":[6,4,3],"pre":[["B","L",1,[1,3,null]],["Y","F",1,[1,2,1]],["O","R",1,[0,null,2]]]},"11":{"add":"Y","t":[1,3,2],"pre":[["B","F",1,[null,3,2]],["O","F",2,[null,0,1]],["P","F",3,[3,-1,-1]]]},"12":{"add":"B","t":[3,2,5],"pre":[["Y","L",1,[null,2,1]],["O","L",2,[2,0,1]],["P","B",1,[-1,null,0]]]},"13":{"add":"?","t":[1,6,0],"pre":[["P","L",1,[-1,4,3]],["Y","B",1,[1,null,0]]]},"14":{"add":"?","t":[5,4,4],"pre":[["B","L",1,[null,3,1]],["O","L",2,[3,0,2]]]},"15":{"add":"?","t":[2,8,3],"pre":[["P","L",1,[3,4,0]],["O","R",1,[1,4,2]]]},"16":{"add":"?","t":[5,5,4],"pre":[["O","B",1,[null,4,1]],["Y","B",2,[1,1,0]]]},"17":{"add":"?","t":[4,1,4],"pre":[["P","F",1,[4,0,3]],["O","R",1,[3,null,0]]]},"18":{"add":"?","t":[3,3,0],"pre":[["P","B",1,[null,0,-1]],["Y","B",2,[1,1,0]]]},"19":{"add":"?","t":[7,0,1],"pre":[["P","B",1,[4,3,-1]]]},"20":{"add":"?","t":[7,3,2],"pre":[["P","B",1,[4,3,3]]]},"21":{"add":"?","t":[2,2,3],"pre":[["Y","R",1,[2,1,1]]]},"22":{"add":"?","t":[0,2,8],"pre":[["O","L",1,[3,2,4]]]},"23":{"add":"?","t":[7,4,2],"pre":[["O","B",1,[4,3,2]]]},"24":{"add":"?","t":[3,4,4],"pre":[["Y","R",1,[0,1,1]]]},"25":{"add":"BY","t":[5,0,1],"pre":[["P","L",1,[0,-1,3]],["O","B",1,[1,null,2]]]},"26":{"add":"YO","t":[2,1,1],"pre":[["P","L",1,[-1,0,4]],["B","B",1,[1,null,3]]]},"27":{"add":"BY","t":[3,2,3],"pre":[["O","L",1,[1,2,0]],["P","B",1,[0,null,4]]]},"28":{"add":"BO","t":[3,3,3],"pre":[["P","L",1,[-1,3,3]],["Y","B",1,[1,null,2]]]},"29":{"add":"BO","t":[6,3,5],"pre":[["P","B",1,[-1,3,null]],["Y","R",1,[1,2,1]]]},"30":{"add":"BY","t":[5,3,9],"pre":[["P","L",1,[4,0,3]],["O","R",1,[2,0,1]]]},"31":{"add":"OY","t":[0,8,8],"pre":[["P","L",1,[null,3,4]],["B","L",2,[2,1,3]]]},"32":{"add":"PB","t":[6,4,9],"pre":[["O","L",1,[4,3,2]],["Y","B",1,[1,null,0]]]},"33":{"add":"BO","t":[0,10,9],"pre":[["Y","B",1,[0,1,null]],["P","R",1,[-1,3,3]]]},"34":{"add":"YP","t":[5,3,3],"pre":[["O","B",1,[2,0,null]],["B","R",1,[3,2,1]]]},"35":{"add":"YO","t":[1,7,11],"pre":[["B","F",1,[1,3,2]],["P","R",1,[0,null,3]]]},"36":{"add":"PB","t":[5,0,8],"pre":[["Y","F",1,[1,1,0]],["O","R",1,[1,null,4]]]},"37":{"add":"??","t":[2,0,0],"pre":[["P","B",1,[0,-1,3]]]},"38":{"add":"??","t":[8,1,8],"pre":[["O","B",1,[2,1,4]]]},"39":{"add":"??","t":[6,9,8],"pre":[["O","B",1,[3,2,4]]]},"40":{"add":"??","t":[1,8,9],"pre":[["O","F",1,[1,4,2]]]},"41":{"add":"??","t":[1,5,1],"pre":[["P","F",1,[-1,-1,0]]]},"42":{"add":"??","t":[7,7,0],"pre":[["Y","B",1,[0,1,1]]]},"43":{"add":"??","t":[0,8,1],"pre":[["O","L",1,[0,1,2]]]},"44":{"add":"??","t":[4,11,8],"pre":[["B","F",1,[1,3,2]]]},"45":{"add":"??","t":[1,6,10],"pre":[["O","F",1,[2,4,3]]]},"46":{"add":"??","t":[8,4,6],"pre":[["Y","F",1,[1,1,0]]]},"47":{"add":"??","t":[1,6,9],"pre":[["P","F",1,[3,-1,4]]]},"48":{"add":"??","t":[0,10,0],"pre":[["B","B",1,[1,3,2]]]},"49":{"add":"BPO","t":[0,0,2],"pre":[["Y","B",1,[0,1,1]]]},"50":{"add":"BPO","t":[0,2,0],"pre":[["Y","B",1,[0,1,1]]]},"51":{"add":"BYO","t":[6,3,0],"pre":[["P","B",1,[0,-1,3]]]},"52":{"add":"BYO","t":[7,0,2],"pre":[["P","B",1,[0,-1,3]]]},"53":{"add":"OPB","t":[11,2,1],"pre":[["Y","B",1,[0,1,1]]]},"54":{"add":"BYO","t":[7,3,0],"pre":[["P","B",1,[0,-1,3]]]},"55":{"add":"OPB","t":[11,6,0],"pre":[["Y","B",1,[0,1,1]]]},"56":{"add":"OPB","t":[10,7,0],"pre":[["Y","B",1,[0,1,1]]]},"57":{"add":"PBY","t":[12,2,0],"pre":[["O","B",1,[3,2,4]]]},"58":{"add":"OPB","t":[8,5,9],"pre":[["Y","F",1,[1,1,0]]]},"59":{"add":"PBY","t":[3,11,3],"pre":[["O","R",1,[0,2,3]]]},"60":{"add":"PBY","t":[3,10,1],"pre":[["O","L",1,[0,1,2]]]}};
+const SOL={"1":[["B","B",1,[3,2,1]]],"2":[["P","B",1,[4,3,3]]],"3":[["B","F",1,[3,2,1]]],"4":[["B","B",2,[3,2,1]]],"5":[["Y","R",1,[1,1,0]]],"6":[["O","R",2,[1,4,2]]],"7":[["B","R",1,[1,3,2]]],"8":[["P","F",2,[3,-1,3]]],"9":[["O","F",1,[0,1,2]]],"10":[["P","R",2,[4,-1,0]]],"11":[["Y","F",4,[1,1,0]]],"12":[["B","B",2,[1,"X",3]]],"13":[["O","F",1,[1,2,0]]],"14":[["Y","R",1,[2,1,1]]],"15":[["Y","L",2,[1,0,1]]],"16":[["P","F",1,[4,0,3]]],"17":[["Y","R",2,[0,1,1]]],"18":[["B","B",3,[3,2,1]]],"19":[["O","L",1,[3,0,2]]],"20":[["O","R",1,[3,0,2]]],"21":[["O","L",1,[0,1,2]]],"22":[["P","L",2,[-1,0,4]]],"23":[["P","L",1,[3,4,0]]],"24":[["P","F",1,[3,4,3]]],"25":[["Y","F",1,[1,1,0]],["B","R",1,[3,2,1]]],"26":[["Y","F",1,[0,1,1]],["O","R",1,[2,3,0]]],"27":[["Y","F",1,[1,0,1]],["B","R",1,[1,3,2]]],"28":[["O","F",1,[2,0,1]],["B","R",1,[1,3,2]]],"29":[["O","F",1,[3,2,4]],["B","L",1,[3,1,"X"]]],"30":[["B","R",2,["X",2,3]],["Y","R",3,[1,1,2]]],"31":[["O","L",3,[2,3,0]],["Y","L",4,[0,1,1]]],"32":[["P","B",2,[-1,0,4]],["B","B",3,[2,1,3]]],"33":[["O","B",2,["X",3,4]],["B","B",3,[1,3,2]]],"34":[["P","B",2,[4,0,3]],["Y","R",2,[1,1,2]]],"35":[["O","F",2,["X",3,4]],["Y","F",3,[1,1,2]]],"36":[["P","F",2,[3,-1,3]],["B","R",2,[2,"X",1]]],"37":[["Y","F",1,[1,1,0]],["O","R",1,[1,2,0]]],"38":[["P","F",1,[3,-1,4]],["B","L",1,[3,2,1]]],"39":[["B","F",1,["X",3,1]],["P","F",2,[3,4,3]]],"40":[["B","B",1,[2,1,3]],["P","B",2,[0,3,4]]],"41":[["B","B",1,["X",3,1]],["O","B",2,[2,3,0]]],"42":[["P","F",1,[4,3,-1]],["O","L",1,[3,4,"X"]]],"43":[["B","F",1,[1,3,2]],["P","F",2,[0,4,-1]]],"44":[["O","B",1,[2,4,3]],["P","B",2,[3,4,3]]],"45":[["B","B",1,["X",2,3]],["P","B",2,[-1,0,4]]],"46":[["O","R",1,[4,"X",3]],["P","F",2,[4,3,3]]],"47":[["O","F",2,[2,4,3]],["B","F",3,[1,3,2]]],"48":[["O","R",1,["X",4,1]],["P","R",2,[-1,3,-1]]],"49":[["P","F",1,[-1,-1,0]],["O","L",1,[0,1,2]],["B","R",1,[1,3,2]]],"50":[["P","F",1,[-1,0,-1]],["B","L",1,[1,2,"X"]],["O","R",1,[0,"X",1]]],"51":[["Y","F",1,[1,1,0]],["B","L",1,[3,2,1]],["O","R",1,[2,3,0]]],"52":[["Y","F",1,[1,0,1]],["O","L",1,[3,0,2]],["B","R",1,[3,2,1]]],"53":[["P","F",1,[4,-1,0]],["O","L",1,[4,3,2]],["B","R",1,[3,2,1]]],"54":[["Y","F",1,[1,1,0]],["B","L",1,[3,2,1]],["O","R",1,[3,"X",0]]],"55":[["P","F",1,[4,3,-1]],["O","L",1,[4,3,2]],["B","R",1,[3,2,1]]],"56":[["P","F",1,[4,3,-1]],["O","L",1,[3,4,"X"]],["B","R",1,[3,2,1]]],"57":[["Y","F",1,[2,1,1]],["B","L",1,[3,1,"X"]],["P","R",1,[4,3,-1]]],"58":[["O","R",1,[4,"X",3]],["B","F",2,[2,1,3]],["P","F",3,[4,3,3]]],"59":[["B","B",1,[2,3,"X"]],["P","R",2,[0,4,-1]],["Y","R",3,[1,2,1]]],"60":[["P","F",1,[3,4,0]],["Y","F",2,[1,2,1]],["B","L",2,[2,3,"X"]]]};
+
+// ---------- Cubos ----------
+// Caras en orden [+u (mira a la izquierda), -u, +v (mira a la derecha), -v, +z (arriba), -z].
+// Números = ratones, -1 = gato, 0 = hueco vacío, 'X' = prohibida.
+const CUBES = {
+  B: { name: 'Azul',     col: '#8fd5e6', faces: ['X', 1, 'X', 2, 'X', 3] },
+  Y: { name: 'Amarillo', col: '#f7c51e', faces: ['X', 1, 'X', 1, 0, 2] },
+  O: { name: 'Naranja',  col: '#f68f1e', faces: ['X', 2, 0, 4, 3, 1] },
+  P: { name: 'Rosa',     col: '#d867c9', faces: [-1, 3, -1, 4, 0, 3] },
+};
+const NORM = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+const CELLS = { B: [0,0], L: [1,0], R: [0,1], F: [1,1] };
+const LEVELS = [
+  { name: 'Nivel 1', col: 'var(--lv1)', hex: '#1fae49' },
+  { name: 'Nivel 2', col: 'var(--lv2)', hex: '#e9b500' },
+  { name: 'Nivel 3', col: 'var(--lv3)', hex: '#e2312f' },
+  { name: 'Nivel 4', col: 'var(--lv4)', hex: '#2789dc' },
+  { name: 'Nivel 5', col: 'var(--lv5)', hex: '#ae55cc' },
+];
+const levelOf = id => Math.min(4, Math.floor((id - 1) / 12));
+
+const mul = (A, B) => A.map(r => [0,1,2].map(j => r[0]*B[0][j] + r[1]*B[1][j] + r[2]*B[2][j]));
+const app = (M, v) => M.map(r => r[0]*v[0] + r[1]*v[1] + r[2]*v[2]);
+const same = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+const tr = M => [0,1,2].map(i => [0,1,2].map(j => M[j][i]));
+const I3 = [[1,0,0],[0,1,0],[0,0,1]];
+const RZ = [[0,-1,0],[1,0,0],[0,0,1]];   // la cara izquierda pasa a la derecha
+const RV = [[0,0,1],[0,1,0],[-1,0,0]];   // la cara de arriba pasa a la izquierda
+const RU = [[1,0,0],[0,0,1],[0,-1,0]];   // la cara de arriba pasa a la derecha
+const ROT_OPS = { spinL: RZ, spinR: tr(RZ), rollL: RV, rollLb: tr(RV), rollR: RU, rollRb: tr(RU) };
+const ROTS = (() => {
+  const out = [I3], seen = new Set([JSON.stringify(I3)]);
+  for (let i = 0; i < out.length; i++) for (const g of [RZ, RV]) {
+    const n = mul(g, out[i]), k = JSON.stringify(n);
+    if (!seen.has(k)) { seen.add(k); out.push(n); }
+  }
+  return out;
+})();
+const faceToward = (key, M, d) => { for (let s = 0; s < 6; s++) if (same(app(M, NORM[s]), d)) return CUBES[key].faces[s]; };
+const UP = [0,0,1], LEFT = [1,0,0], RIGHT = [0,1,0];
+const triple = (key, M) => [faceToward(key, M, UP), faceToward(key, M, LEFT), faceToward(key, M, RIGHT)];
+const findRot = (key, t) => ROTS.find(M => { const x = triple(key, M); return t.every((v, i) => v === null || v === x[i]); });
+
+// ---------- Estado ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+let solved = new Set(store.get('ratones-solved', []));
+let chId = 1, cubes = [], selected = null, pool = [], need = 0, chooseMode = false;
+let won = false, usedSolution = false, hintMesh = null, hintTimer = 0;
+
+// ---------- Cronómetro ----------
+// Cuenta el tiempo activo del reto: empieza al abrirlo, se para al superarlo
+// y no corre mientras la pestaña está oculta.
+const clock = { elapsed: 0, since: null, running: false };
+let hintsUsed = 0, logged = false;
+const clockNow = () => clock.elapsed + (clock.running && clock.since ? Date.now() - clock.since : 0);
+function clockStart() { clock.elapsed = 0; clock.running = true; clock.since = document.hidden ? null : Date.now(); }
+function clockStop() { clock.elapsed = clockNow(); clock.running = false; clock.since = null; }
+document.addEventListener('visibilitychange', () => {
+  if (!clock.running) return;
+  if (document.hidden) { clock.elapsed = clockNow(); clock.since = null; }
+  else clock.since = Date.now();
+});
+function fmt(ms) {
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, ss = String(s % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+function paintClock() {
+  $('clockText').textContent = fmt(clockNow());
+  $('clock').classList.toggle('done', !clock.running && logged && !usedSolution);
+  $('clock').classList.toggle('paused', !clock.running && (!logged || usedSolution));
+}
+setInterval(paintClock, 250);
+
+// ---------- Registro de tiempos ----------
+// Se guarda en tu cuenta (db, privado para cada persona) y, como respaldo, en este navegador.
+let LOG = store.get('ratones-log', []);
+let logRef = null, writeChain = Promise.resolve(), downloadsP = null;
+function saveLog() {
+  store.set('ratones-log', LOG);
+  if (!logRef) return;
+  const body = { entries: LOG };
+  writeChain = writeChain.then(() => logRef.set(body)).catch(e => {
+    console.warn('No se pudo guardar en la cuenta', e);
+    if (e && (e.code === 'invalid_argument' || e.code === 'revoked' || e.code === 'not_granted')) logRef = null;
+    toast('No se ha podido guardar el tiempo en tu cuenta. Queda guardado en este navegador.');
+    paintLogWhere();
+  });
+}
+function addLog(withSolution) {
+  logged = true;
+  const prevBest = Math.min(...LOG.filter(e => e.reto === chId && !e.solucion).map(e => e.ms));
+  const entry = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), reto: chId, ms: Math.round(clock.elapsed), fecha: new Date().toISOString(), pistas: hintsUsed, solucion: withSolution };
+  LOG.push(entry);
+  saveLog();
+  if ($('logOverlay').hidden === false) renderLog();
+  return { entry, isBest: !withSolution && isFinite(prevBest) && entry.ms < prevBest };
+}
+async function initStorage() {
+  const c = window.claude;
+  if (!c || !c.use) return;
+  downloadsP = c.use('downloads').catch(() => null);
+  downloadsP.then(d => { $('exportCsv').hidden = !d; });
+  try {
+    const [db, user] = await Promise.all([c.use('db'), c.use('user')]);
+    if (!db || !user) return;
+    const uid = await user.id();
+    if (!uid) return;
+    const ref = db.doc('data/users/' + uid + '/tiempos');
+    const snap = await ref.get();
+    const remote = snap.exists ? (snap.data().entries || []) : [];
+    const ids = new Set(remote.map(e => e.id));
+    const localOnly = LOG.filter(e => !ids.has(e.id));
+    LOG = [...remote, ...localOnly].sort((a, b) => a.fecha < b.fecha ? -1 : 1);
+    logRef = ref;
+    if (localOnly.length) saveLog(); else store.set('ratones-log', LOG);
+    paintLogWhere();
+    if (!$('logOverlay').hidden) renderLog();
+  } catch (e) { console.warn('Registro solo en este navegador', e); }
+}
+function paintLogWhere() {
+  $('logWhere').textContent = logRef
+    ? 'Guardado en tu cuenta: lo verás también en otros dispositivos al abrir esta página.'
+    : 'Guardado solo en este navegador.';
+}
+function csvText() {
+  const rows = [['reto', 'nivel', 'segundos', 'tiempo', 'fecha', 'pistas', 'vio_solucion']];
+  for (const e of LOG) rows.push([e.reto, levelOf(e.reto) + 1, (e.ms / 1000).toFixed(1), fmt(e.ms), new Date(e.fecha).toLocaleString('es-ES'), e.pistas, e.solucion ? 'sí' : 'no']);
+  return rows.map(r => r.map(v => /[",;\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(',')).join('\n');
+}
+function renderLog() {
+  const done = LOG.filter(e => !e.solucion);
+  const firstPerReto = new Map();
+  for (const e of done) if (!firstPerReto.has(e.reto) || e.ms < firstPerReto.get(e.reto)) firstPerReto.set(e.reto, e.ms);
+  const total = LOG.reduce((s, e) => s + e.ms, 0);
+  $('stSolved').textContent = firstPerReto.size;
+  $('stTotal').textContent = fmt(total);
+  $('stAvg').textContent = done.length ? fmt(done.reduce((s, e) => s + e.ms, 0) / done.length) : '–';
+  const body = $('logBody'); body.innerHTML = '';
+  for (const e of [...LOG].reverse()) {
+    const tr = document.createElement('tr');
+    const best = !e.solucion && firstPerReto.get(e.reto) === e.ms;
+    const help = e.solucion ? 'Vio la solución' : e.pistas ? `${e.pistas} pista${e.pistas > 1 ? 's' : ''}` : 'Sin ayuda';
+    tr.innerHTML = `<td><span class="reto" style="background:${LEVELS[levelOf(e.reto)].col}">${e.reto}</span></td>
+      <td class="${best ? 'best' : ''}">${fmt(e.ms)}${best ? ' · mejor' : ''}</td>
+      <td class="help">${help}</td>
+      <td>${new Date(e.fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</td>`;
+    body.appendChild(tr);
+  }
+  $('logEmpty').hidden = LOG.length > 0;
+  $('logWrap').hidden = LOG.length === 0;
+  for (const id of ['exportCsv', 'copyCsv', 'clearLog']) $(id).disabled = LOG.length === 0;
+  $('copyBox').hidden = true;
+  paintLogWhere();
+}
+async function exportCsv() {
+  const dl = downloadsP && await downloadsP;
+  if (!dl) return copyCsv();
+  try {
+    await dl.save({ filename: 'ratones-a-la-vista-tiempos.csv', data: '﻿' + csvText() });
+    toast('Registro exportado.');
+  } catch (e) {
+    if (e && e.code === 'declined') return;
+    toast('No se ha podido exportar. Usa «Copiar como CSV».');
+  }
+}
+async function copyCsv() {
+  const text = csvText();
+  try { await navigator.clipboard.writeText(text); toast('Registro copiado. Pégalo en una hoja de cálculo.'); }
+  catch {
+    const box = $('copyBox'); box.value = text; box.hidden = false; box.focus(); box.select();
+    toast('Selecciona el texto y cópialo con Ctrl+C.');
+  }
+}
+let clearArmed = 0;
+function clearLog() {
+  if (Date.now() > clearArmed) {
+    clearArmed = Date.now() + 4000;
+    $('clearLog').textContent = '¿Seguro? Pulsa otra vez';
+    setTimeout(() => { $('clearLog').textContent = 'Borrar registro'; }, 4000);
+    return;
+  }
+  clearArmed = 0; $('clearLog').textContent = 'Borrar registro';
+  LOG = []; saveLog(); renderLog(); toast('Registro borrado.');
+}
+
+const $ = id => document.getElementById(id);
+const placed = () => cubes.filter(c => c.cell);
+const at = (u, v, z) => cubes.find(c => c.cell && c.cell[0] === u && c.cell[1] === v && c.z === z);
+const colHeight = (u, v) => cubes.filter(c => c.cell && c.cell[0] === u && c.cell[1] === v).length;
+const isTop = c => !at(c.cell[0], c.cell[1], c.z + 1);
+
+function score() {
+  const tot = [0, 0, 0], xs = [];
+  for (const c of placed()) {
+    const [u, v] = c.cell, z = c.z;
+    const checks = [[!at(u, v, z + 1), UP, 0], [!at(u + 1, v, z), LEFT, 1], [!at(u, v + 1, z), RIGHT, 2]];
+    for (const [vis, d, i] of checks) {
+      if (!vis) continue;
+      const f = faceToward(c.key, c.M, d);
+      if (f === 'X') xs.push(i); else tot[i] += f;
+    }
+  }
+  return { tot: tot.map(x => Math.max(0, x)), xs };
+}
+
+// ---------- Texturas ----------
+const texCache = {};
+function circle(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); }
+function hole(g, x, y, r) {
+  circle(g, x, y, r); g.fillStyle = '#2a2026'; g.fill();
+  const sh = g.createRadialGradient(x, y + r * .35, r * .2, x, y, r);
+  sh.addColorStop(0, 'rgba(70,55,60,.0)'); sh.addColorStop(1, 'rgba(0,0,0,.55)');
+  g.fillStyle = sh; circle(g, x, y, r); g.fill();
+}
+function rim(g, x, y, r) {
+  g.lineWidth = r * .08; g.strokeStyle = 'rgba(0,0,0,.28)'; circle(g, x, y, r); g.stroke();
+  g.lineWidth = r * .05; g.strokeStyle = 'rgba(255,255,255,.35)';
+  g.beginPath(); g.arc(x, y, r * 1.03, Math.PI * .15, Math.PI * .85); g.stroke();
+}
+function ellipse(g, x, y, rx, ry, fill) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); }
+function mouse(g, x, y, r) {
+  hole(g, x, y, r);
+  g.save(); circle(g, x, y, r * .97); g.clip();
+  for (const s of [-1, 1]) { ellipse(g, x + s * r * .5, y - r * .28, r * .34, r * .34, '#9f9aa5'); ellipse(g, x + s * r * .5, y - r * .28, r * .2, r * .2, '#f1a1b2'); }
+  ellipse(g, x, y + r * .2, r * .56, r * .5, '#aeaab3');
+  ellipse(g, x, y + r * .42, r * .3, r * .2, '#c9c5cd');
+  for (const s of [-1, 1]) { ellipse(g, x + s * r * .21, y + r * .08, r * .1, r * .12, '#17151a'); ellipse(g, x + s * r * .21 - r * .03, y + r * .04, r * .035, r * .035, '#fff'); }
+  ellipse(g, x, y + r * .33, r * .09, r * .07, '#e86b88');
+  g.strokeStyle = 'rgba(40,36,45,.75)'; g.lineWidth = r * .025;
+  for (const s of [-1, 1]) for (const dy of [-.04, .06]) { g.beginPath(); g.moveTo(x + s * r * .14, y + r * .38); g.lineTo(x + s * r * .66, y + r * (.32 + dy)); g.stroke(); }
+  for (const s of [-1, 1]) ellipse(g, x + s * r * .26, y + r * .82, r * .15, r * .11, '#d6d2da');
+  g.restore(); rim(g, x, y, r);
+}
+function cat(g, x, y, r) {
+  circle(g, x, y, r); g.fillStyle = '#d42f3c'; g.fill();
+  g.save(); circle(g, x, y, r * .97); g.clip();
+  for (const s of [-1, 1]) {
+    g.beginPath(); g.moveTo(x + s * r * .62, y - r * .05); g.lineTo(x + s * r * .5, y - r * .72); g.lineTo(x + s * r * .12, y - r * .38); g.closePath(); g.fillStyle = '#f19631'; g.fill();
+    g.beginPath(); g.moveTo(x + s * r * .5, y - r * .15); g.lineTo(x + s * r * .46, y - r * .55); g.lineTo(x + s * r * .24, y - r * .36); g.closePath(); g.fillStyle = '#f7b8a8'; g.fill();
+  }
+  ellipse(g, x, y + r * .14, r * .62, r * .54, '#f39b34');
+  g.strokeStyle = '#c9661a'; g.lineWidth = r * .07; g.lineCap = 'round';
+  for (const dx of [-.14, 0, .14]) { g.beginPath(); g.moveTo(x + dx * r, y - r * .32); g.lineTo(x + dx * r, y - r * .18); g.stroke(); }
+  ellipse(g, x, y + r * .42, r * .3, r * .18, '#fde3c6');
+  for (const s of [-1, 1]) { ellipse(g, x + s * r * .24, y + r * .06, r * .13, r * .14, '#cfe34a'); ellipse(g, x + s * r * .24, y + r * .06, r * .04, r * .12, '#1a1a12'); }
+  g.beginPath(); g.moveTo(x - r * .08, y + r * .28); g.lineTo(x + r * .08, y + r * .28); g.lineTo(x, y + r * .37); g.closePath(); g.fillStyle = '#e86b88'; g.fill();
+  g.strokeStyle = '#6b3510'; g.lineWidth = r * .035;
+  g.beginPath(); g.arc(x - r * .07, y + r * .4, r * .07, 0, Math.PI); g.arc(x + r * .07, y + r * .4, r * .07, 0, Math.PI); g.stroke();
+  g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = r * .022;
+  for (const s of [-1, 1]) for (const dy of [-.05, .06]) { g.beginPath(); g.moveTo(x + s * r * .3, y + r * .38); g.lineTo(x + s * r * .78, y + r * (.33 + dy)); g.stroke(); }
+  g.restore(); rim(g, x, y, r);
+}
+function cross(g, S) {
+  g.strokeStyle = '#e21d24'; g.lineCap = 'round'; g.lineWidth = S * .12;
+  g.beginPath(); g.moveTo(S * .24, S * .25); g.quadraticCurveTo(S * .48, S * .46, S * .78, S * .79); g.stroke();
+  g.lineWidth = S * .1;
+  g.beginPath(); g.moveTo(S * .77, S * .2); g.quadraticCurveTo(S * .47, S * .52, S * .24, S * .8); g.stroke();
+}
+const LAYOUT = {
+  1: [[.5, .5, .33]],
+  2: [[.29, .29, .21], [.71, .71, .21]],
+  3: [[.24, .24, .17], [.5, .5, .17], [.76, .76, .17]],
+  4: [[.28, .28, .19], [.72, .28, .19], [.28, .72, .19], [.72, .72, .19]],
+};
+function faceCanvas(key, label, S = 256) {
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.fillStyle = CUBES[key].col; g.fillRect(0, 0, S, S);
+  const gr = g.createRadialGradient(S * .3, S * .25, S * .05, S * .5, S * .5, S * .8);
+  gr.addColorStop(0, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(0,0,0,.08)');
+  g.fillStyle = gr; g.fillRect(0, 0, S, S);
+  if (label === 'X') cross(g, S);
+  else if (label === -1) cat(g, S / 2, S / 2, S * .34);
+  else if (label === 0) { hole(g, S / 2, S / 2, S * .3); rim(g, S / 2, S / 2, S * .3); }
+  else for (const [x, y, r] of LAYOUT[label]) mouse(g, x * S, y * S, r * S);
+  return c;
+}
+function faceTex(key, label) {
+  const k = key + label;
+  if (!texCache[k]) {
+    const t = new THREE.CanvasTexture(faceCanvas(key, label));
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    texCache[k] = t;
+  }
+  return texCache[k];
+}
+const matCache = {};
+function cubeMats(key, ghost = false) {
+  const k = key + ghost;
+  if (!matCache[k]) {
+    matCache[k] = [2, 3, 4, 5, 0, 1].map(s => new THREE.MeshStandardMaterial({
+      map: faceTex(key, CUBES[key].faces[s]), roughness: .62, metalness: 0,
+      transparent: ghost, opacity: ghost ? .55 : 1, depthWrite: !ghost,
+    }));
+  }
+  return matCache[k];
+}
+
+// ---------- Escena ----------
+const canvas = $('scene');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+} catch (e) {
+  $('loading').textContent = 'Este navegador no puede mostrar gráficos 3D (WebGL).';
+  throw e;
+}
+$('loading').hidden = true;
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, .1, 100);
+const CAM_HOME = new THREE.Vector3(5.3, 4.9, 5.3);
+const CAM_TARGET = new THREE.Vector3(0, .75, 0);
+camera.position.copy(CAM_HOME);
+camera.layers.enable(1);
+const controls = new OrbitControls(camera, canvas);
+controls.target.copy(CAM_TARGET);
+controls.enablePan = false;
+controls.enableDamping = true;
+controls.minDistance = 5; controls.maxDistance = 16;
+controls.maxPolarAngle = Math.PI * .47;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xc7a57a, 1.9));
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(3.5, 8, 4.5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 20 });
+sun.shadow.radius = 4;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, .7);
+fill.position.set(-5, 3, 6);
+scene.add(fill);
+
+function woodTexture() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.fillStyle = '#e2b27a'; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 70; i++) {
+    const y0 = Math.random() * S, a = 4 + Math.random() * 10, f = .004 + Math.random() * .01, ph = Math.random() * 6;
+    g.strokeStyle = `rgba(150,95,45,${.06 + Math.random() * .14})`; g.lineWidth = .8 + Math.random() * 2.5;
+    g.beginPath();
+    for (let x = 0; x <= S; x += 8) { const y = y0 + Math.sin(x * f + ph) * a; x ? g.lineTo(x, y) : g.moveTo(x, y); }
+    g.stroke();
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return t;
+}
+const wood = woodTexture();
+const tileMat = new THREE.MeshStandardMaterial({ map: wood, roughness: .75 });
+const baseMat = new THREE.MeshStandardMaterial({ color: 0xb8793d, roughness: .8 });
+const platform = new THREE.Group();
+const base = new THREE.Mesh(new RoundedBoxGeometry(2.24, .16, 2.24, 3, .05), baseMat);
+base.position.y = -.17; base.receiveShadow = true; platform.add(base);
+const tiles = [];
+for (const [cell, [u, v]] of Object.entries(CELLS)) {
+  const t = new THREE.Mesh(new RoundedBoxGeometry(1.04, .13, 1.04, 3, .04), tileMat);
+  t.position.set(v - .5, -.065, u - .5);
+  t.receiveShadow = true; t.userData.cell = [u, v];
+  tiles.push(t); platform.add(t);
+}
+scene.add(platform);
+
+const cubeGeo = new RoundedBoxGeometry(.97, .97, .97, 4, .07);
+const P = [[0,1,0],[0,0,1],[1,0,0]]; // juego (u,v,z) -> three (x=v, y=z, z=u)
+function quatOf(M) {
+  const A = mul(mul(P, M), tr(P));
+  const m = new THREE.Matrix4().set(A[0][0], A[0][1], A[0][2], 0, A[1][0], A[1][1], A[1][2], 0, A[2][0], A[2][1], A[2][2], 0, 0, 0, 0, 1);
+  return new THREE.Quaternion().setFromRotationMatrix(m);
+}
+const posOf = (cell, z) => new THREE.Vector3(cell[1] - .5, z + .5, cell[0] - .5);
+
+const glow = new THREE.Mesh(new THREE.BoxGeometry(1.08, 1.08, 1.08),
+  new THREE.MeshBasicMaterial({ color: 0xe0761b, transparent: true, opacity: .28, side: THREE.BackSide, depthWrite: false }));
+glow.layers.set(1);
+const ghost = new THREE.Mesh(new THREE.BoxGeometry(.97, .97, .97),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .35, depthWrite: false }));
+ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(ghost.geometry), new THREE.LineBasicMaterial({ color: 0xe0761b })));
+ghost.layers.set(1); ghost.children[0].layers.set(1);
+ghost.visible = false; scene.add(ghost);
+
+function makeMesh(c, drop) {
+  const m = new THREE.Mesh(cubeGeo, cubeMats(c.key));
+  m.castShadow = m.receiveShadow = true;
+  m.userData.cube = c;
+  c.mesh = m;
+  c.tPos = posOf(c.cell, c.z); c.tQuat = quatOf(c.M);
+  m.position.copy(c.tPos); if (drop) m.position.y += 1.6;
+  m.quaternion.copy(c.tQuat);
+  scene.add(m);
+}
+function syncMesh(c) {
+  if (!c.cell) { if (c.mesh) { scene.remove(c.mesh); c.mesh = null; } return; }
+  if (!c.mesh) makeMesh(c, true);
+  c.tPos = posOf(c.cell, c.z); c.tQuat = quatOf(c.M);
+}
+
+// ---------- Vistas pequeñas ----------
+const minis = ['vTop', 'vLeft', 'vRight'].map(id => {
+  const cv = $(id);
+  const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 50);
+  return { cv, r, cam };
+});
+function frameMinis() {
+  const h = Math.max(1, ...placed().map(c => c.z + 1));
+  const half = Math.max(1.25, (h + .45) / 2);
+  const yc = -.25 + half;
+  const [top, left, right] = minis.map(m => m.cam);
+  const tH = 1.55;
+  Object.assign(top, { left: -tH, right: tH, top: tH, bottom: -tH });
+  top.position.set(0, 20, 0); top.up.set(-1, 0, -1).normalize(); top.lookAt(0, 0, 0);
+  for (const c of [left, right]) Object.assign(c, { left: -half, right: half, top: half, bottom: -half });
+  left.position.set(0, yc, 20); left.up.set(0, 1, 0); left.lookAt(0, yc, 0);
+  right.position.set(20, yc, 0); right.up.set(0, 1, 0); right.lookAt(0, yc, 0);
+  for (const c of [top, left, right]) c.updateProjectionMatrix();
+}
+
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / Math.max(1, r.height);
+  camera.fov = camera.aspect < .8 ? 40 : 30;
+  camera.updateProjectionMatrix();
+  for (const m of minis) { const w = m.cv.clientWidth; m.r.setSize(w, w, false); }
+}
+new ResizeObserver(resize).observe($('stage'));
+new ResizeObserver(resize).observe($('vTop'));
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const k = reduceMotion ? 1 : 1 - Math.pow(.0008, dt);
+  for (const c of cubes) if (c.mesh) {
+    c.mesh.position.lerp(c.tPos, k);
+    c.mesh.quaternion.slerp(c.tQuat, k);
+  }
+  if (selected && selected.mesh) {
+    glow.visible = true; glow.position.copy(selected.mesh.position); glow.quaternion.copy(selected.mesh.quaternion);
+    const s = 1 + (reduceMotion ? 0 : Math.sin(now / 260) * .015); glow.scale.setScalar(s);
+  } else glow.visible = false;
+  if (hintMesh && now > hintTimer) clearHint();
+  controls.update();
+  renderer.render(scene, camera);
+  for (const m of minis) m.r.render(scene, m.cam);
+  requestAnimationFrame(loop);
+}
+scene.add(glow);
+
+// ---------- Interacción ----------
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+function pick(ev) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const objs = [...tiles, ...cubes.filter(c => c.mesh).map(c => c.mesh)];
+  return ray.intersectObjects(objs, false)[0] || null;
+}
+// Devuelve la columna donde caería el cubo elegido, o null si el toque es para elegir otro cubo.
+function targetColumn(hit) {
+  if (!hit || !selected) return null;
+  if (hit.object.userData.cell) return hit.object.userData.cell;
+  const c = hit.object.userData.cube;
+  if (!selected.cell) return c.cell;
+  if (c === selected) return null;
+  const n = hit.face.normal.clone().applyQuaternion(hit.object.quaternion);
+  return n.y > .7 ? c.cell : null;
+}
+let down = null;
+canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointerup', e => {
+  if (!down) return;
+  const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null;
+  if (moved > 6) return;
+  const hit = pick(e);
+  const col = targetColumn(hit);
+  if (col) return placeOn(col);
+  if (hit && hit.object.userData.cube) {
+    const c = hit.object.userData.cube;
+    if (c.fixed) return toast('Este cubo viene puesto en el reto: no se mueve ni se gira.');
+    select(c === selected ? null : c);
+    return;
+  }
+  if (!hit && selected) select(null);
+});
+canvas.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' || down || !selected) { ghost.visible = false; return; }
+  const col = targetColumn(pick(e));
+  if (!col || (selected.cell && col[0] === selected.cell[0] && col[1] === selected.cell[1])) { ghost.visible = false; return; }
+  const h = colHeight(col[0], col[1]);
+  if (h >= 4) { ghost.visible = false; return; }
+  ghost.position.copy(posOf(col, h)); ghost.visible = true;
+});
+canvas.addEventListener('pointerleave', () => { ghost.visible = false; });
+
+function placeOn(col) {
+  const s = selected;
+  if (!s || s.fixed) return;
+  if (s.cell && s.cell[0] === col[0] && s.cell[1] === col[1]) return;
+  if (s.cell && !isTop(s)) return toast('Primero quita el cubo que tiene encima.');
+  if (!s.cell && placed().filter(c => !c.fixed).length >= need) return toast(`Este reto usa ${need === 1 ? 'un solo cubo' : need + ' cubos'}. Quita uno antes de poner otro.`);
+  s.cell = null;
+  const h = colHeight(col[0], col[1]);
+  s.cell = col; s.z = h;
+  ghost.visible = false;
+  $('toast').classList.remove('show');
+  clearHint();
+  syncMesh(s);
+  update();
+}
+function select(c) {
+  selected = c;
+  if (c && !c.cell) toast(`Ahora toca una casilla de la base para poner el cubo ${CUBES[c.key].name.toLowerCase()}.`);
+  update();
+}
+function rotateSel(op) {
+  const s = selected;
+  if (!s || !s.cell || s.fixed) return;
+  s.M = mul(ROT_OPS[op], s.M);
+  syncMesh(s); clearHint(); update();
+}
+function removeSel() {
+  const s = selected;
+  if (!s || !s.cell || s.fixed) return;
+  if (!isTop(s)) return toast('Primero quita el cubo que tiene encima.');
+  s.cell = null; syncMesh(s); selected = null; update();
+}
+document.querySelectorAll('[data-rot]').forEach(b => b.addEventListener('click', () => rotateSel(b.dataset.rot)));
+$('remove').addEventListener('click', removeSel);
+addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea') || !$('gridOverlay').hidden || !$('winOverlay').hidden || !$('logOverlay').hidden) return;
+  const map = { q: 'spinL', e: 'spinR', a: 'rollL', d: 'rollR', w: 'rollLb', s: 'rollRb' };
+  const op = map[e.key.toLowerCase()];
+  if (op) { rotateSel(op); e.preventDefault(); }
+  else if (e.key === 'Delete' || e.key === 'Backspace') removeSel();
+  else if (e.key === 'Escape') select(null);
+});
+
+let toastT = 0;
+function toast(msg, ms = 2600) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ---------- Iconos ----------
+function cubeSVG(hex, q = false) {
+  const c = new THREE.Color(hex), top = c.clone().lerp(new THREE.Color(0xffffff), .35).getStyle(), right = c.clone().multiplyScalar(.8).getStyle();
+  return `<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 36 11.5 20 20 4 11.5z" fill="${top}" stroke="rgba(0,0,0,.35)" stroke-width="1.2" stroke-linejoin="round"/><path d="M4 11.5 20 20v17L4 28.5z" fill="${c.getStyle()}" stroke="rgba(0,0,0,.35)" stroke-width="1.2" stroke-linejoin="round"/><path d="M36 11.5 20 20v17l16-8.5z" fill="${right}" stroke="rgba(0,0,0,.35)" stroke-width="1.2" stroke-linejoin="round"/>${q ? '<text x="20" y="16" text-anchor="middle" font-size="9" font-weight="800" fill="#444" font-family="sans-serif">?</text>' : ''}</svg>`;
+}
+
+// ---------- UI ----------
+function update() {
+  const ch = CH[chId], { tot, xs } = score(), help = $('help').checked;
+  const ids = ['Top', 'Left', 'Right'];
+  ids.forEach((k, i) => {
+    $('t' + k).textContent = ch.t[i];
+    const cur = $('cur' + k);
+    cur.hidden = !help; cur.textContent = `${tot[i]} ahora`; cur.classList.toggle('ok', tot[i] === ch.t[i]);
+    const vv = $('vv' + k);
+    vv.textContent = help ? `${tot[i]} de ${ch.t[i]}` : `meta ${ch.t[i]}`;
+    vv.classList.toggle('ok', help && tot[i] === ch.t[i]);
+    minis[i].cv.classList.toggle('xbad', xs.includes(i));
+  });
+  // bandeja
+  const used = placed().filter(c => !c.fixed).length;
+  $('trayCount').textContent = `${used} de ${need} en la base`;
+  $('trayNote').textContent = chooseMode
+    ? `Elige ${need === 1 ? 'cuál de estos cubos' : 'cuáles ' + need + ' de estos cubos'} necesitas. Toca uno y luego una casilla.`
+    : 'Toca un cubo y luego una casilla. Toca la cara de arriba de un cubo para apilar encima.';
+  $('tray').innerHTML = '';
+  for (const c of pool) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (c === selected ? ' held' : '') + (c.cell ? ' placed' : '');
+    b.innerHTML = `${cubeSVG(CUBES[c.key].col)}<span>${CUBES[c.key].name}</span><span class="st">${c.cell ? 'en la base' : c === selected ? 'en la mano' : 'en la bandeja'}</span>`;
+    b.addEventListener('click', () => {
+      if (!c.cell && c !== selected && used >= need) return toast(`Este reto usa ${need === 1 ? 'un solo cubo' : need + ' cubos'}. Quita uno antes de coger otro.`);
+      select(c === selected && !c.cell ? null : c);
+    });
+    $('tray').appendChild(b);
+  }
+  const can = !!(selected && selected.cell);
+  document.querySelectorAll('[data-rot]').forEach(b => b.disabled = !can);
+  $('remove').disabled = !can;
+  $('selName').textContent = selected ? `${CUBES[selected.key].name.toLowerCase()}${selected.cell ? '' : ' (en la mano)'}` : 'ninguno elegido';
+  frameMinis();
+  // victoria
+  const ok = used === need && xs.length === 0 && tot.every((v, i) => v === ch.t[i]);
+  if (ok && !won) { won = true; if (!usedSolution) win(); }
+  if (!ok) won = false;
+}
+
+function check() {
+  const ch = CH[chId], { tot, xs } = score(), used = placed().filter(c => !c.fixed).length;
+  if (used < need) return toast(`Faltan cubos: has puesto ${used} de ${need}.`);
+  if (xs.length) return toast('Hay una X a la vista. Las caras con X no pueden verse.');
+  const names = ['arriba', 'la izquierda', 'la derecha'];
+  const bad = tot.map((v, i) => v === ch.t[i] ? null : `desde ${names[i]} se ven ${v} y deberían ser ${ch.t[i]}`).filter(Boolean);
+  if (!bad.length) return win();
+  toast('Todavía no: ' + bad.join('; ') + '.', 4200);
+}
+
+function win() {
+  if (!usedSolution) { solved.add(chId); store.set('ratones-solved', [...solved]); }
+  let isBest = false;
+  if (!logged) { clockStop(); isBest = addLog(false).isBest; paintClock(); }
+  const helpTxt = hintsUsed ? ` con ${hintsUsed} pista${hintsUsed > 1 ? 's' : ''}` : '';
+  $('winTitle').textContent = `¡Reto ${chId} superado!`;
+  $('winText').textContent = `Lo has resuelto en ${fmt(clock.elapsed)}${helpTxt}.` + (isBest ? ' ¡Es tu mejor tiempo en este reto!' : '') + (chId === 60 ? ' Has llegado al último reto.' : '');
+  $('nextWin').hidden = chId === 60;
+  $('winOverlay').hidden = false;
+  confetti();
+  updateProgress();
+}
+
+function clearHint() { if (hintMesh) { scene.remove(hintMesh); hintMesh = null; } }
+function hint() {
+  clearHint();
+  const sol = SOL[chId];
+  const wrong = sol.find(([key, cell, lvl, t]) => {
+    const c = cubes.find(x => x.key === key && !x.fixed);
+    if (!c || !c.cell) return true;
+    const want = CELLS[cell];
+    return !(c.cell[0] === want[0] && c.cell[1] === want[1] && c.z === lvl - 1 && same(triple(key, c.M), t));
+  });
+  if (!wrong) return toast('¡Todos los cubos ya están en su sitio!');
+  const [key, cell, lvl, t] = wrong;
+  const M = findRot(key, t);
+  hintMesh = new THREE.Mesh(cubeGeo, cubeMats(key, true));
+  hintMesh.position.copy(posOf(CELLS[cell], lvl - 1)); hintMesh.quaternion.copy(quatOf(M));
+  hintMesh.layers.set(1); scene.add(hintMesh);
+  hintTimer = performance.now() + 5000;
+  if (!logged) hintsUsed++;
+  const where = { B: 'al fondo', L: 'a la izquierda', R: 'a la derecha', F: 'delante' }[cell];
+  toast(`Pista: el cubo ${CUBES[key].name.toLowerCase()} va ${where}${lvl > 1 ? ', en el piso ' + lvl : ''}, girado como el cubo transparente.`, 5000);
+}
+function showSolution() {
+  if (!logged) { clockStop(); usedSolution = true; addLog(true); paintClock(); }
+  usedSolution = true; clearHint();
+  for (const c of cubes) if (!c.fixed && c.cell) { c.cell = null; syncMesh(c); }
+  selected = null;
+  const sol = [...SOL[chId]].sort((a, b) => a[2] - b[2]);
+  sol.forEach(([key, cell, lvl, t], i) => setTimeout(() => {
+    const c = cubes.find(x => x.key === key && !x.fixed);
+    c.M = findRot(key, t); c.cell = CELLS[cell]; c.z = lvl - 1; syncMesh(c); update();
+    if (i === sol.length - 1) toast('Esta es la solución. Mira cada vista para entender por qué funciona.', 4000);
+  }, reduceMotion ? 0 : i * 450));
+  update();
+}
+
+function loadChallenge(id) {
+  chId = Math.max(1, Math.min(60, id));
+  store.set('ratones-current', chId);
+  for (const c of cubes) if (c.mesh) scene.remove(c.mesh);
+  clearHint();
+  cubes = []; selected = null; won = false; usedSolution = false;
+  hintsUsed = 0; logged = false; clockStart(); paintClock();
+  const ch = CH[chId];
+  ch.pre.forEach(([key, cell, lvl, t]) => {
+    const c = { key, M: findRot(key, t), cell: CELLS[cell], z: lvl - 1, fixed: true };
+    if (!c.M) console.error('Sin orientación para', chId, key, t);
+    cubes.push(c); makeMesh(c, false);
+  });
+  chooseMode = ch.add.includes('?');
+  need = ch.add.length;
+  const keys = chooseMode ? ['B', 'Y', 'O', 'P'].filter(k => !ch.pre.some(p => p[0] === k)) : ch.add.split('');
+  pool = keys.map(key => ({ key, M: I3, cell: null, z: 0, fixed: false }));
+  cubes.push(...pool);
+  // tarjeta
+  const lv = LEVELS[levelOf(chId)];
+  $('idnum').textContent = chId; $('idnum').style.background = lv.col;
+  $('idcubes').innerHTML = ch.add.split('').map(k => k === '?' ? cubeSVG('#b9bec0', true) : cubeSVG(CUBES[k].col)).join('');
+  $('prev').disabled = chId === 1; $('next').disabled = chId === 60;
+  update(); updateProgress();
+}
+function updateProgress() { $('progress').textContent = `${solved.size} / 60 resueltos`; }
+
+function openGrid() {
+  const box = $('levels'); box.innerHTML = '';
+  LEVELS.forEach((lv, li) => {
+    const sec = document.createElement('div'); sec.className = 'level';
+    const done = Array.from({ length: 12 }, (_, i) => li * 12 + i + 1).filter(n => solved.has(n)).length;
+    sec.innerHTML = `<h3><i style="background:${lv.col}"></i>${lv.name} · retos ${li * 12 + 1}–${li * 12 + 12} · ${done}/12</h3><div class="grid"></div>`;
+    const g = sec.querySelector('.grid');
+    for (let n = li * 12 + 1; n <= li * 12 + 12; n++) {
+      const b = document.createElement('button');
+      b.textContent = n; b.style.background = lv.col;
+      b.className = (n === chId ? 'cur ' : '') + (solved.has(n) ? 'done' : '');
+      b.setAttribute('aria-label', `Reto ${n}${solved.has(n) ? ', resuelto' : ''}`);
+      b.addEventListener('click', () => { $('gridOverlay').hidden = true; loadChallenge(n); });
+      g.appendChild(b);
+    }
+    box.appendChild(sec);
+  });
+  $('gridOverlay').hidden = false;
+}
+
+function confetti() {
+  if (reduceMotion) return;
+  const cv = $('confetti'); cv.hidden = false;
+  const g = cv.getContext('2d'); cv.width = innerWidth; cv.height = innerHeight;
+  const cols = Object.values(CUBES).map(c => c.col);
+  const ps = Array.from({ length: 140 }, () => ({
+    x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5, s: 6 + Math.random() * 8,
+    vy: 2 + Math.random() * 3.5, vx: -1.5 + Math.random() * 3, r: Math.random() * 6, vr: -.15 + Math.random() * .3, c: cols[Math.floor(Math.random() * 4)],
+  }));
+  const end = performance.now() + 2600;
+  (function frame(now) {
+    g.clearRect(0, 0, cv.width, cv.height);
+    for (const p of ps) {
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.fillRect(-p.s / 2, -p.s / 2, p.s, p.s); g.restore();
+    }
+    if (now < end) requestAnimationFrame(frame); else { g.clearRect(0, 0, cv.width, cv.height); cv.hidden = true; }
+  })(performance.now());
+}
+
+function legend() {
+  const items = [[1, 'Ratón: suma uno a esa vista.'], [-1, 'Gato: resta uno a esa vista.'], ['X', 'Prohibida: no puede verse desde ninguna vista.'], [0, 'Hueco vacío: no suma nada.']];
+  $('legend').innerHTML = '';
+  for (const [lab, txt] of items) {
+    const c = faceCanvas(lab === 1 ? 'Y' : lab === -1 ? 'P' : lab === 'X' ? 'B' : 'O', lab, 96);
+    const s = document.createElement('span'); s.textContent = txt;
+    $('legend').append(c, s);
+  }
+}
+
+$('prev').addEventListener('click', () => loadChallenge(chId - 1));
+$('next').addEventListener('click', () => loadChallenge(chId + 1));
+$('openGrid').addEventListener('click', openGrid);
+$('closeGrid').addEventListener('click', () => { $('gridOverlay').hidden = true; });
+$('gridOverlay').addEventListener('click', e => { if (e.target === $('gridOverlay')) $('gridOverlay').hidden = true; });
+$('stay').addEventListener('click', () => { $('winOverlay').hidden = true; });
+$('nextWin').addEventListener('click', () => { $('winOverlay').hidden = true; loadChallenge(chId + 1); });
+$('openLog').addEventListener('click', () => { renderLog(); $('logOverlay').hidden = false; });
+$('closeLog').addEventListener('click', () => { $('logOverlay').hidden = true; });
+$('logOverlay').addEventListener('click', e => { if (e.target === $('logOverlay')) $('logOverlay').hidden = true; });
+$('exportCsv').addEventListener('click', exportCsv);
+$('copyCsv').addEventListener('click', copyCsv);
+$('clearLog').addEventListener('click', clearLog);
+$('check').addEventListener('click', check);
+$('hint').addEventListener('click', hint);
+$('solve').addEventListener('click', showSolution);
+$('reset').addEventListener('click', () => loadChallenge(chId));
+$('help').checked = store.get('ratones-help', false);
+$('help').addEventListener('change', () => { store.set('ratones-help', $('help').checked); update(); });
+$('resetCam').addEventListener('click', () => { camera.position.copy(CAM_HOME); controls.target.copy(CAM_TARGET); controls.update(); });
+
+function start(data) {
+  legend();
+  initStorage();
+  const fromHash = /^#reto-(\d+)$/.exec(location.hash);
+  loadChallenge(data.chId || (fromHash ? +fromHash[1] : store.get('ratones-current', 1)));
+  resize();
+  requestAnimationFrame(loop);
+}
+window.claude?.hot?.snapshot?.(() => ({ chId }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+
+</body></html>
